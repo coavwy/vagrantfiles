@@ -1,0 +1,52 @@
+# vi: ft=ruby
+
+$install = <<EOF
+echo "Installing Docker CE"
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+apt-get update
+apt-get -y install docker-ce
+usermod -aG docker ubuntu
+EOF
+
+$manager = <<EOF
+echo "swarm init ..."
+docker swarm init --listen-addr 192.168.0.100:2377 --advertise-addr 192.168.0.100:2377
+docker swarm join-token --quiet worker > /vagrant/join-token.worker
+docker container run -it -d -p 5005:8080 -v /var/run/docker.sock:/var/run/docker.sock dockersamples/visualizer
+EOF
+
+$worker = <<EOF
+echo "swarm join ..."
+docker swarm join --token $(cat /vagrant/join-token.worker) 192.168.0.100:2377
+EOF
+
+Vagrant.configure('2') do |config|
+  config.vm.provision "shell", inline: $install, privileged: true
+
+  config.vm.define 'manager', primary: true do |m|
+    m.vm.box = 'ubuntu/xenial64'
+    m.vm.network :private_network, ip: "192.168.0.100"
+    m.vm.network :forwarded_port, guest: 8080, host: 8080
+    m.vm.network :forwarded_port, guest: 5005, host: 5005
+    m.vm.hostname = "manager"
+    m.vm.provision "shell", inline: $manager, privileged: true
+    m.vm.provider "virtualbox" do |v|
+      v.name = "manager"
+      v.memory = "1024"
+    end
+  end
+
+  (1..2).each do |i|
+    config.vm.define "worker#{i}" do |w|
+      w.vm.box = 'ubuntu/xenial64'
+      w.vm.network :private_network, ip: "192.168.0.10#{i}"
+      w.vm.hostname = "worker#{i}"
+      w.vm.provision "shell", inline: $worker, privileged: true
+      w.vm.provider "virtualbox" do |v|
+        v.name = "worker#{i}"
+        v.memory = "1024"
+      end
+    end
+  end
+end
