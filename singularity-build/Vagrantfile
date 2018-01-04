@@ -1,0 +1,23 @@
+# vi: ft=ruby
+
+$script = <<EOF
+echo "build and install Singularity"
+apt update
+apt -y install build-essential dh-autoreconf python
+cd /usr/local && \
+  git clone https://github.com/singularityware/singularity.git && \
+  cd singularity && \
+  ./autogen.sh && \
+  ./configure --prefix=/usr/local --sysconfdir=/etc && \
+  make install
+EOF
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/xenial64"
+  config.vm.hostname = "singularity"
+  config.vm.provision "shell", inline: $script, privileged: true
+  config.vm.provider "virtualbox" do |v|
+    v.name = "singularity"
+    v.memory = "1024"
+  end
+end
