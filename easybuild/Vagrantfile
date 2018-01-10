@@ -1,0 +1,28 @@
+# vi: ft=ruby
+
+$eb_root = <<EOF
+yum -y install epel-release
+yum -y install @'Development Tools' Lmod python-setuptools which
+useradd user -m
+EOF
+
+$eb_vagrant = <<EOF
+export EASYBUILD_PREFIX=$HOME/.local/easybuild
+curl -O https://raw.githubusercontent.com/easybuilders/easybuild-framework/develop/easybuild/scripts/bootstrap_eb.py
+python bootstrap_eb.py $EASYBUILD_PREFIX
+module use $EASYBUILD_PREFIX/modules/all
+module load EasyBuild
+module save eb
+echo "module restore eb" >> ~/.bashrc
+EOF
+
+Vagrant.configure("2") do |m|
+  m.vm.box = "centos/7"
+  m.vm.provision "shell", inline: $eb_root, privileged: true
+  m.vm.provision "shell", inline: $eb_vagrant, privileged: false
+  m.vm.provider "virtualbox" do |v|
+    v.name = "manager"
+    v.memory = "1024"
+  end
+end
+
