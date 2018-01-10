@@ -3,7 +3,6 @@
 $eb_root = <<EOF
 yum -y install epel-release
 yum -y install @'Development Tools' Lmod python-setuptools which
-useradd user -m
 EOF
 
 $eb_vagrant = <<EOF
