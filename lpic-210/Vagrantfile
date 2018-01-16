@@ -1,0 +1,29 @@
+# vi: ft=ruby
+
+#vagrant ssh server1/2
+#ssh -i .vagrant/machines/server1/virtualbox/private_key vagrant@192.168.0.101
+
+$preparation = <<EOF
+echo "Preparation " 
+apt update
+apt -y dist-upgrade
+EOF
+
+Vagrant.configure("2") do |config|
+  (1..2).each do |i|
+    config.vm.define "server#{i}" do |s|
+      s.vm.box = "ubuntu/xenial64"
+      s.vm.provision "shell", inline: $preparation, privileged: true
+      if i == 1
+        s.vm.network :private_network, ip: "192.168.0.10#{i}"
+      else
+        s.vm.network :private_network, ip: "192.168.0.10#{i}", auto_config: false
+      end
+      s.vm.hostname = "server#{i}.example.com"
+      s.vm.provider "virtualbox" do |v|
+        v.name = "server#{i}"
+        v.memory = "1024"
+      end
+    end
+  end
+end
